@@ -1,0 +1,74 @@
+package qqbot;
+
+// QQ消息服务
+service QQBotService {
+  // 发送消息
+  rpc SendMessage(SendMessageRequest) returns(SendMessageResponse) {}
+
+  // 批量发送消息
+  rpc SendBatchMessages(SendBatchMessagesRequest)
+      returns(SendBatchMessagesResponse) {}
+
+  // 健康检查
+  rpc HealthCheck(HealthCheckRequest) returns(HealthCheckResponse) {}
+}
+
+// 消息段
+message MessageSegment {
+  string type = 1;  // 消息段类型: Text, Face, Image, At, Reply, etc.
+  string data = 2;  // JSON格式的消息数据
+}
+
+// 包装消息段列表
+message MessageSegments { repeated MessageSegment segments = 1; }
+
+// 消息内容
+message MessageContent {
+  oneof content {
+    string text = 1;                       // 简单文本消息
+    MessageSegment segment = 2;            // 单个消息段
+    MessageSegments segments_wrapper = 3;  // 多个消息段组合（通过包装）
+  }
+}
+
+// 发送消息请求
+message SendMessageRequest {
+  string target_id = 1;              // 目标ID（QQ号或群号）
+  string target_type = 2;            // 目标类型: "user" 或 "group"
+  MessageContent content = 3;        // 消息内容
+  map<string, string> metadata = 4;  // 元数据
+  string sender_id = 5;              // 发送者ID（可选）
+}
+
+// 批量发送请求
+message SendBatchMessagesRequest {
+  repeated string target_ids = 1;    // 目标ID列表
+  string target_type = 2;            // 目标类型: "user" 或 "group"
+  MessageContent content = 3;        // 消息内容
+  map<string, string> metadata = 4;  // 元数据
+  string sender_id = 5;              // 发送者ID（可选）
+}
+
+// 发送消息响应
+message SendMessageResponse {
+  int32 status = 1;    // 状态码 (200=成功)
+  string message = 2;  // 状态信息
+  string data = 3;     // JSON格式附加数据
+}
+
+// 批量发送响应
+message SendBatchMessagesResponse {
+  int32 status = 1;    // 状态码 (200=成功)
+  string message = 2;  // 状态信息
+  string data = 3;     // JSON格式附加数据
+}
+
+// 健康检查请求
+message HealthCheckRequest {}
+
+// 健康检查响应
+message HealthCheckResponse {
+  int32 status = 1;    // 状态码 (200=成功)
+  string message = 2;  // 状态信息
+  string data = 3;     // JSON格式附加数据
+}
