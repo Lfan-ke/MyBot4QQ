@@ -9,10 +9,9 @@ User=root
 Group=root
 WorkingDirectory=/home/heke1228/application/MyBot4QQ
 
-ExecStartPre=/usr/bin/test -e /sys/class/net/wifi0
-ExecStartPre=/bin/bash -c 'if ! ip addr show dev wifi0 | grep -q "192.168.99.99"; then ip addr add 192.168.99.99/24 dev wifi0 label wifi0:99; echo "虚拟IP 192.168.99.99 已添加到 wifi0"; else echo "虚拟IP 192.168.99.99 已存在"; fi'
+ExecStartPre=/sbin/ip addr add 192.168.99.99/24 dev wifi0 2>/dev/null || true
 ExecStart=/usr/bin/uv run main.py
-ExecStopPost=/bin/bash -c 'ip addr del 192.168.99.99/24 dev wifi0 2>/dev/null && echo "虚拟IP已删除" || true'
+ExecStopPost=/sbin/ip addr del 192.168.99.99/24 dev wifi0 2>/dev/null || true
 
 Restart=on-failure
 RestartSec=10
