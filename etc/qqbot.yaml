@@ -5,7 +5,7 @@ server:
   max_workers: 10
 
 consul:
-  host: "dc-a588.local:8500"
+  host: "localhost:8500"
   token: ""
   scheme: "http"
   health_check_interval: "10s"
