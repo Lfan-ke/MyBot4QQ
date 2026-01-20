@@ -69,82 +69,32 @@ class QQBotMicroservice:
 
                 # 准备KV数据（接口定义）
                 server_data = {
-                    "version": "1.0.0",
-                    "protocol": "grpc",
-                    "features": ["private_message", "group_message", "rich_message"],
                     "fields": {
                         "target_id": {
-                            "required": True,
-                            "type": "string",
-                            "description": "目标ID（QQ号或群号）"
+                            "type": "str",
+                            "description": "目标ID（QQ号或群号）",
+                            "required": True
                         },
                         "target_type": {
+                            "type": "enum",
+                            "description": "目标类型：user（私聊）或 group（群聊）",
                             "required": True,
-                            "type": "string",
-                            "enum": ["user", "group"],
-                            "description": "目标类型：user（私聊）或 group（群聊）"
+                            "enum": ["user", "group"]
                         },
                         "content": {
-                            "required": True,
-                            "type": "object",
+                            "type": "dict",
                             "description": "消息内容，支持多种格式",
-                            "oneOf": [
-                                {
-                                    "type": "string",
-                                    "description": "简单文本消息"
-                                },
-                                {
-                                    "type": "object",
-                                    "description": "单个消息段",
-                                    "properties": {
-                                        "type": {
-                                            "type": "string",
-                                            "enum": ["Text", "Face", "Image", "At", "Reply"],
-                                            "description": "消息段类型"
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "description": "消息段数据"
-                                        }
-                                    }
-                                },
-                                {
-                                    "type": "object",
-                                    "description": "消息组合",
-                                    "properties": {
-                                        "type": {
-                                            "type": "string",
-                                            "enum": ["MessageArray", "MessageChain"],
-                                            "description": "消息组合类型"
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "oneOf": [
-                                                    {
-                                                        "type": "string",
-                                                        "description": "文本内容"
-                                                    },
-                                                    {
-                                                        "type": "object",
-                                                        "description": "消息段"
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "required": True
                         },
                         "metadata": {
-                            "required": False,
-                            "type": "object",
-                            "description": "附加元数据"
+                            "type": "dict",
+                            "description": "附加元数据",
+                            "required": False
                         },
                         "sender_id": {
-                            "required": False,
-                            "type": "string",
-                            "description": "发送者标识"
+                            "type": "str",
+                            "description": "发送者标识",
+                            "required": False
                         }
                     }
                 }
