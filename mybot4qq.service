@@ -9,9 +9,7 @@ User=root
 Group=root
 WorkingDirectory=/home/heke1228/application/MyBot4QQ
 
-ExecStartPre=/bin/bash -c "/sbin/ip addr add 192.168.99.99/24 dev wifi0 2>/dev/null || true"
 ExecStart=/usr/bin/uv run main.py
-ExecStopPost=/bin/bash -c "/sbin/ip addr del 192.168.99.99/24 dev wifi0 2>/dev/null || true"
 
 Restart=on-failure
 RestartSec=10
