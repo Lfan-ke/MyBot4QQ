@@ -1,22 +1,21 @@
 [Unit]
 Description=MyBot4QQ Service
 After=network.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=root
 Group=root
-ExecStart=/usr/bin/uv run main.py
 WorkingDirectory=/home/heke1228/application/MyBot4QQ
+
+ExecStartPre=/usr/sbin/ip addr show dev eth0 | grep -q "192.168.99.99" || /usr/sbin/ip addr add 192.168.99.99/24 dev eth0 label eth0:99
+ExecStart=/usr/bin/uv run main.py
+ExecStopPost=-/usr/sbin/ip addr del 192.168.99.99/24 dev eth0
 
 Restart=on-failure
 RestartSec=10
 StartLimitBurst=3
-
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=/home/heke1228/application/MyBot4QQ
 
 StandardOutput=journal
 StandardError=journal

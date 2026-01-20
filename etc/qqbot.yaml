@@ -1,6 +1,6 @@
 server:
   name: "ew.qbot"
-  listen_on: "0.0.0.0:50053"
+  listen_on: "192.168.99.99:50053"
   mode: "dev"
   max_workers: 10
 
