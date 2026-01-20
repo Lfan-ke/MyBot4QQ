@@ -11,7 +11,6 @@ WorkingDirectory=/home/heke1228/application/MyBot4QQ
 
 Restart=on-failure
 RestartSec=10
-StartLimitIntervalSec=60
 StartLimitBurst=3
 
 NoNewPrivileges=true

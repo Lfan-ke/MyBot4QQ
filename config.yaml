@@ -7,10 +7,10 @@ check_ncatbot_update: false
 skip_ncatbot_install_check: true
 websocket_timeout: 60
 napcat:
-  ws_uri: ws://dc-a588.local:3002/
+  ws_uri: ws://localhost:3002/
   ws_token: Qq360123.
-  ws_listen_ip: dc-a588.local
-  webui_uri: http://dc-a588.local:6099/
+  ws_listen_ip: localhost
+  webui_uri: http://localhost:6099/
   webui_token: Qq360123.
   enable_webui: false
   check_napcat_update: false
