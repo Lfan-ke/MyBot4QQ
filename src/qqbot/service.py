@@ -64,7 +64,7 @@ class QQBotMicroservice:
                 host = socket.gethostbyname(socket.gethostname())
 
             # Consul注册
-            if cfg.consul.host and cfg.consul.host != "localhost:8500":
+            if cfg.consul.host:
                 logger.info(f"🔗 连接到 Consul: {cfg.consul.host}")
 
                 # 准备KV数据（接口定义）
