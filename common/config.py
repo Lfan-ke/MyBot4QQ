@@ -2,6 +2,7 @@ import yaml
 from dataclasses import dataclass, field, asdict
 from logger import logger
 
+
 @dataclass
 class PulsarConfig:
     Main: str = "persistent://echo-wing/main"
@@ -37,17 +38,35 @@ class ConsulConfig:
 
 
 @dataclass
+class NapCatConfig:
+    """NapCat REST API 配置"""
+    Http: str = "http://localhost:3001"
+    Token: str = "Qq360123."
+    TimeOut: int = 10  # 保持10秒超时
+
+    @property
+    def base_url(self) -> str:
+        """获取基础URL"""
+        return self.Http.rstrip("/")
+
+    def to_dict(self) -> dict[str, ...]:
+        return asdict(self)
+
+
+@dataclass
 class AppConfig:
     Name: str
     Mode: str
     Pulsar: PulsarConfig = field(default_factory=PulsarConfig)
     Consul: ConsulConfig = field(default_factory=ConsulConfig)
+    NapCat: NapCatConfig = field(default_factory=NapCatConfig)
 
     def to_dict(self) -> dict[str, ...]:
         data = asdict(self)
         data["Mode"] = self.Mode
         data["Pulsar"] = self.Pulsar.to_dict()
         data["Consul"] = self.Consul.to_dict()
+        data["NapCat"] = self.NapCat.to_dict()
         return data
 
 
@@ -55,7 +74,7 @@ yaml_config: AppConfig | None = None
 
 
 class ConfigLoader:
-    def __init__(self, config_path: str = "qqbot.yaml"):
+    def __init__(self, config_path: str = "config.yaml"):
         self.config_path = config_path
         global yaml_config
         if yaml_config is None:
@@ -105,12 +124,22 @@ class ConfigLoader:
             Scheme=consul_data.get("Scheme", "http"),
         )
 
+        napcat_data = yaml_data.get("NatCat", {}) or yaml_data.get("NapCat", {})
+        napcat_config = NapCatConfig(
+            Http=napcat_data.get("Http", "http://localhost:3001"),
+            Token=napcat_data.get("Token", "Qq360123."),
+            TimeOut=napcat_data.get("Timeout", napcat_data.get("TimeOut", 10))
+        )
+
         configs = AppConfig(
             Name=yaml_data.get("Name", "qqbot"),
             Mode=yaml_data.get("Mode", "dev"),
             Pulsar=pulsar_config,
             Consul=consul_config,
+            NapCat=napcat_config,
         )
 
         logger.info_sync(f"✅ QQBot配置加载成功: {configs.Name} [{configs.Mode}]")
+        logger.info_sync(f"📡 NapCat API地址: {configs.NapCat.Http}")
+
         return configs
