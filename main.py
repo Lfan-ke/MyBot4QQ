@@ -1,98 +1,170 @@
-"""
-QQBot 微服务主程序入口
-"""
 import asyncio
-import signal
-import sys
-from pathlib import Path
-from loguru import logger
+from ncatbot.core import BotClient
 
-from src.qqbot.service import QQBotMicroservice
+from common import (
+    ConfigLoader, ConsulKVClient, PulsarService, KVServiceMeta,
+)
+from logger import logger
+from service.qqbot import (
+    QQMessage,
+    qqbot_field_description,
+)
+
+config = ConfigLoader()
 
 
-async def shutdown_handler(service: QQBotMicroservice, signum):
-    """异步信号处理函数"""
-    logger.info(f"📶 收到信号 {signum}，正在关闭服务...")
-    await service.stop()
+class QQBotSender:
+    """QQBot发送器（简化版）"""
+
+    def __init__(self):
+        self._api = None
+        self._connected = False
+
+    async def connect(self) -> bool:
+        """连接到QQBot"""
+        if self._connected and self._api:
+            return True
+
+        try:
+            logger.info_sync("🔗 连接到QQBot...")
+
+            try:
+                bot_client = BotClient()
+                self._api = bot_client.run_backend()
+
+                test_result = self._api.get_login_info_sync()
+
+                if test_result and hasattr(test_result, 'user_id'):
+                    self._connected = True
+
+                    user_id = getattr(test_result, 'user_id', '未知')
+                    nickname = getattr(test_result, 'nickname', '未知')
+                    logger.info_sync(f"✅ QQBot连接成功: {nickname}({user_id})")
+                    return True
+                else:
+                    logger.error_sync("❌ QQBot连接测试失败: 无法获取登录信息")
+                    return False
+
+            except Exception as e:
+                logger.error_sync(f"❌ 创建QQBot API连接失败: {e}")
+                return False
+
+        except Exception as e:
+            logger.error_sync(f"💥 QQBot连接失败: {e}")
+            return False
+
+    async def send_message(self, qq_msg: QQMessage) -> bool:
+        """发送QQ消息"""
+        try:
+            if not await self.connect():
+                return False
+
+            # ncatbot的rtf参数直接接受消息数组
+            rtf_content = qq_msg.content
+
+            # 根据target_type发送消息
+            if qq_msg.target_type.lower() == "user":
+                # 私聊消息
+                result = self._api.post_private_msg_sync(
+                    user_id=qq_msg.target_id,
+                    rtf=rtf_content
+                )
+            elif qq_msg.target_type.lower() == "group":
+                # 群聊消息
+                result = self._api.post_group_msg_sync(
+                    group_id=qq_msg.target_id,
+                    rtf=rtf_content
+                )
+            else:
+                logger.error_sync(f"❌ 不支持的目标类型: {qq_msg.target_type}")
+                return False
+
+            if result:
+                logger.info_sync(f"✅ QQ消息发送成功: {qq_msg.target_type} {qq_msg.target_id}")
+                return True
+            else:
+                logger.error_sync(f"❌ QQ消息发送失败: {result}")
+                return False
+
+        except Exception as e:
+            logger.error_sync(f"💥 发送QQ消息异常: {e}")
+            # 连接失效，重置状态
+            self._connected = False
+            self._api = None
+            return False
 
 
-async def main_async(config_path: str):
-    """异步主函数"""
-    # 创建微服务实例
-    service = QQBotMicroservice(Path(config_path))
+async def qqbot_handler(payload: dict[str, ...]) -> bool:
+    """QQBot服务处理器"""
+    try:
+        # 解析消息
+        qq_msg = QQMessage.from_dict(payload)
 
-    # 设置信号处理
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(sig, lambda s, _: asyncio.create_task(shutdown_handler(service, s)))
+        # 创建QQBot发送器并发送消息
+        qqbot_sender = QQBotSender()
+        success = await qqbot_sender.send_message(qq_msg)
+
+        return success
+
+    except Exception as e:
+        await logger.error(f"💥 [qqbot] 处理异常: {e}")
+        return False
+
+
+async def main():
+    logger.set_app_name("EchoWing QQBot Service")
+
+    # 创建Pulsar服务
+    qqbot_service = PulsarService(
+        service_name=config.config.Name,
+        pulsar_url=config.config.Pulsar.Url,
+        main_topic=config.main_topic(config.config.Name),
+        dlq_topic=config.dlq_topic,
+    )
+
+    # 启动服务
+    await qqbot_service.start(
+        message_handler=qqbot_handler,
+    )
+
+    consul = ConsulKVClient(
+        host=config.config.Consul.Host,
+        port=config.config.Consul.Port,
+        token=config.config.Consul.Token,
+        scheme=config.config.Consul.Scheme,
+        kv_base_path=config.config.Consul.Base,
+    )
+
+    # 注册服务到Consul
+    qqbot_schema = KVServiceMeta(
+        ServerName=config.config.Name,
+        ServerDesc="EchoWing QQ机器人消息服务",
+        ServerIcon=None,
+        ServerPath=config.main_topic(config.config.Name),
+        ServerData={"fields": {
+            **qqbot_field_description
+        }}
+    )
+
+    await consul.register_kv(config.config.Name, qqbot_schema.to_dict())
+
+    await logger.info(f"✅ 已注册 KV 到 Consul")
+    await logger.info("🎯 QQBot服务已启动，配置了自动重试和死信队列")
+    await logger.info("🤖 服务监听中...")
 
     try:
-        # 启动服务
-        started = await service.start()
-        if not started:
-            logger.error("❌ 服务启动失败")
-            return 1
-
-        # 运行服务
-        await service.run()
-
+        await asyncio.gather(qqbot_service.task)
     except asyncio.CancelledError:
-        logger.info("服务被取消")
-    except KeyboardInterrupt:
-        logger.info("收到键盘中断")
+        await logger.info("🛑 服务被终止")
     except Exception as e:
-        logger.error(f"服务运行异常: {e}")
-        import traceback
-        traceback.print_exc()
-        return 1
+        await logger.error(f"💥 主程序异常: {e}")
     finally:
-        # 确保服务被停止
-        if not service._shutting_down:
-            await service.stop()
+        await qqbot_service.stop()
 
-    return 0
+        await consul.deregister_kv(config.config.Name)
 
-
-def main():
-    """主函数"""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="QQBot 微服务")
-    parser.add_argument(
-        "--config", "-c",
-        default="etc/qqbot.yaml",
-        help="配置文件路径 (默认: etc/qqbot.yaml)"
-    )
-    parser.add_argument(
-        "--debug", "-d",
-        action="store_true",
-        help="启用调试模式"
-    )
-
-    args = parser.parse_args()
-
-    # 设置日志级别
-    if args.debug:
-        logger.remove()
-        logger.add(
-            sys.stdout,
-            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-                   "<level>{level: <8}</level> | "
-                   "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-                   "<level>{message}</level>",
-            level="DEBUG",
-            colorize=True
-        )
-
-    # 检查配置文件
-    config_path = Path(args.config)
-    if not config_path.exists():
-        print(f"❌ 配置文件不存在: {config_path}")
-        print("请创建配置文件或使用 --config 参数指定")
-        return 1
-
-    # 运行主程序
-    return asyncio.run(main_async(args.config))
+        await logger.info("🚮 已注销 KV 从 Consul")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    asyncio.run(main())
