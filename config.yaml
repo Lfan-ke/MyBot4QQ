@@ -2,18 +2,18 @@ Name: qqbot
 Mode: dev
 
 Pulsar:
-  Url: "pulsar://dc-a588.local:6650"
+  Url: "pulsar://localhost:6650"
   Main: "persistent://echo-wing/main"
   Dlq: "persistent://echo-wing/dlq/all"
 
 Consul:
-  Host: "dc-a588.local"
+  Host: "localhost"
   Port: 8500
   Base: "echo_wing/"
   Token: ""
   Scheme: "http"
 
 NatCat:
-  Http: "http://dc-a588.local:3001"
+  Http: "http://localhost:3001"
   Token: "Qq360123."
   TimeOut: 10 # s
