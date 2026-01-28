@@ -81,9 +81,15 @@ class QQMessage:
         if other_fields:
             try:
                 other_json = json.dumps(other_fields, ensure_ascii=False, indent=2)
-                metadata_texts.append(f"其他元数据:\n{other_json}")
+                metadata_texts.append({
+                    "type": "text",
+                    "data": {"text": f"其他元数据:\n{other_json}"}
+                })
             except Exception as _:
-                metadata_texts.append(f"其他元数据: {str(other_fields)}")
+                metadata_texts.append({
+                    "type": "text",
+                    "data": {"text": f"其他元数据: {str(other_fields)}"}
+                })
 
         if metadata_texts:
             metadata_text = "\n\n".join(metadata_texts)
