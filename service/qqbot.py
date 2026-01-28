@@ -115,27 +115,439 @@ class QQMessage:
 
 
 qqbot_field_description = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "QQBot Message Schema",
+  "description": "QQ机器人消息发送格式",
+  "properties": {
     "target_id": {
-        "type": "str",
-        "description": "QQ号或群号",
-        "required": True,
-        "pattern": r"^\d{5,15}$",
+      "type": "string",
+      "description": "QQ号或群号",
+      "pattern": "^\\d{5,15}$"
     },
     "target_type": {
-        "type": "enum",
-        "description": "私聊(user)或群聊(group)",
-        "required": True,
-        "enum": ["user", "group"],
+      "type": "string",
+      "description": "私聊(user)或群聊(group)",
+      "enum": ["user", "group"]
     },
     "content": {
-        "type": "list",
-        "description": "消息内容，支持多种格式，详见ncatbot的ref文档，以后写描述...",  # 以后完善规范之后弄...
-        "required": True,
+      "type": "array",
+      "description": "消息内容，支持多种消息格式的数组",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "简写格式：纯文本消息，内部会自动转换为text类型"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "text",
+                "description": "文本消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "文本内容，支持CQ码和转义字符"
+                  }
+                },
+                "required": ["text"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "at",
+                "description": "@某人"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "qq": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "description": "QQ号，用于@特定用户",
+                        "pattern": "^\\d{5,15}$"
+                      },
+                      {
+                        "type": "string",
+                        "const": "all",
+                        "description": "特殊值，@全体成员"
+                      }
+                    ]
+                  }
+                },
+                "required": ["qq"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "image",
+                "description": "图片消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "图片文件路径/URL/base64://编码数据"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "图片URL（可选，与file互斥）"
+                  },
+                  "cache": {
+                    "type": "boolean",
+                    "description": "是否缓存图片",
+                    "default": True
+                  }
+                },
+                "required": ["file"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "face",
+                "description": "QQ表情消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "表情ID，如14表示微笑",
+                    "minimum": 0,
+                    "maximum": 255
+                  }
+                },
+                "required": ["id"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "record",
+                "description": "语音消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "语音文件路径/URL，支持amr、silk、mp3格式"
+                  },
+                  "magic": {
+                    "type": "boolean",
+                    "description": "是否变声",
+                    "default": False
+                  },
+                  "cache": {
+                    "type": "boolean",
+                    "description": "是否缓存",
+                    "default": True
+                  }
+                },
+                "required": ["file"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "video",
+                "description": "视频消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "视频文件路径/URL，支持mp4格式"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "视频URL（可选）"
+                  },
+                  "cover": {
+                    "type": "string",
+                    "description": "封面图片URL（可选）"
+                  },
+                  "cache": {
+                    "type": "boolean",
+                    "description": "是否缓存",
+                    "default": True
+                  }
+                },
+                "required": ["file"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "file",
+                "description": "文件消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "文件路径，服务器本地或网络文件均可"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "文件名（可选）"
+                  }
+                },
+                "required": ["file"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "reply",
+                "description": "回复消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "回复消息的message_id"
+                  },
+                  "seq": {
+                    "type": "integer",
+                    "description": "回复消息的序列号，与id二选一"
+                  }
+                },
+                "oneOf": [
+                  {
+                    "required": ["id"]
+                  },
+                  {
+                    "required": ["seq"]
+                  }
+                ],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "json",
+                "description": "JSON卡片消息"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "string",
+                    "description": "JSON格式的卡片数据字符串"
+                  }
+                },
+                "required": ["data"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "dice",
+                "description": "掷骰子（随机生成1-6点数）"
+              }
+            },
+            "required": ["type"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "rps",
+                "description": "猜拳（随机生成石头剪刀布）"
+              }
+            },
+            "required": ["type"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "music",
+                "description": "音乐分享消息"
+              },
+              "data": {
+                "type": "object",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "description": "平台音乐（QQ音乐、网易云等）",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["qq", "163", "xm"],
+                        "description": "音乐平台：qq(QQ音乐)、163(网易云)、xm(虾米)"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "平台歌曲ID"
+                      },
+                      "singer": {
+                        "type": "string",
+                        "description": "歌手（可选）"
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "歌曲标题（可选）"
+                      }
+                    },
+                    "required": ["type", "id"],
+                    "additionalProperties": False
+                  },
+                  {
+                    "type": "object",
+                    "description": "自定义音乐",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "custom"
+                      },
+                      "url": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "歌曲跳转链接"
+                      },
+                      "audio": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "音频流链接"
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "歌曲标题"
+                      },
+                      "image": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "封面图片链接（可选）"
+                      },
+                      "singer": {
+                        "type": "string",
+                        "description": "歌手（可选）"
+                      }
+                    },
+                    "required": ["type", "url", "audio", "title"],
+                    "additionalProperties": False
+                  }
+                ]
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          },
+          {
+            "type": "object",
+            "description": "消息节点（用于合并转发）",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "node"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "pattern": "^\\d{5,15}$",
+                    "description": "发送者QQ号"
+                  },
+                  "nickname": {
+                    "type": "string",
+                    "description": "发送者昵称"
+                  },
+                  "content": {
+                    "$ref": "#/properties/content",
+                    "description": "节点内的消息内容，结构与外层content相同"
+                  }
+                },
+                "required": ["user_id", "nickname", "content"],
+                "additionalProperties": False
+              }
+            },
+            "required": ["type", "data"],
+            "additionalProperties": False
+          }
+        ]
+      }
     },
     "metadata": {
-        "type": "dict",
-        "description": "可选元数据，比如app和user，用于记录",
-        "required": False,
-        "default": {},
+      "type": "object",
+      "description": "可选元数据，比如app和user，用于记录",
+      "default": {},
+      "additionalProperties": True
     }
+  },
+  "required": ["target_id", "target_type", "content"]
 }
