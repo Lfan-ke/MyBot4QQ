@@ -12,6 +12,8 @@ from service.qqbot import (
 
 config = ConfigLoader()
 
+logger.set_app_name(f"<[EW QQBot]>")
+
 
 def build_url(base_url: str, endpoint: str) -> str:
     """
