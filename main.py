@@ -146,8 +146,6 @@ async def qqbot_handler(payload: dict[str, ...]) -> bool:
 
 
 async def main():
-    logger.set_app_name("EchoWing QQBot Service")
-
     # 创建Pulsar服务
     qqbot_service = PulsarService(
         service_name=config.config.Name,
